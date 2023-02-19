@@ -8,6 +8,7 @@ using Cesxhin.AnimeManga.Application.CronJob;
 using Quartz;
 using Cesxhin.AnimeManga.Application.CheckManager.Interfaces;
 using Cesxhin.AnimeManga.Application.CheckManager;
+using Cesxhin.AnimeManga.Application.Schema;
 
 namespace Cesxhin.AnimeManga.UpdateService
 {
@@ -15,6 +16,8 @@ namespace Cesxhin.AnimeManga.UpdateService
     {
         public static void Main(string[] args)
         {
+            SchemaControl.Check();
+
             CreateHostBuilder(args).Build().Run();
         }
 
@@ -45,7 +48,7 @@ namespace Cesxhin.AnimeManga.UpdateService
                     NLogManager.Configure(logLevel);
 
                     //select service between anime or manga
-                    var serviceSelect = Environment.GetEnvironmentVariable("SELECT_SERVICE") ?? "anime";
+                    var serviceSelect = Environment.GetEnvironmentVariable("SELECT_SERVICE") ?? "video";
 
                     //cronjob for check health
                     services.AddQuartz(q =>
@@ -61,10 +64,10 @@ namespace Cesxhin.AnimeManga.UpdateService
                     });
                     services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
-                    if(serviceSelect.ToLower().Contains("anime"))
-                        services.AddTransient<IUpdate, UpdateAnime>();
+                    if(serviceSelect.ToLower().Contains("video"))
+                        services.AddTransient<IUpdate, UpdateVideo>();
                     else
-                        services.AddTransient<IUpdate, UpdateManga>();
+                        services.AddTransient<IUpdate, UpdateBook>();
 
                     services.AddHostedService<Worker>();
                 });
