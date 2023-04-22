@@ -1,11 +1,12 @@
-﻿using Cesxhin.AnimeManga.Application.Interfaces.Repositories;
+﻿using Cesxhin.AnimeManga.Application.Exceptions;
+using Cesxhin.AnimeManga.Application.Interfaces.Repositories;
 using Cesxhin.AnimeManga.Application.Interfaces.Services;
 using Cesxhin.AnimeManga.Application.NlogManager;
 using Cesxhin.AnimeManga.Domain.DTO;
 using Newtonsoft.Json.Linq;
 using NLog;
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Cesxhin.AnimeManga.Application.Services
@@ -19,52 +20,140 @@ namespace Cesxhin.AnimeManga.Application.Services
         private readonly IDescriptionRepository _descriptionRepository;
         private readonly IEpisodeRepository _episodeRepository;
         private readonly IEpisodeRegisterRepository _episodeRegisterRepository;
+        private readonly IAccountService _accountService;
 
-        public DescriptionVideoService(IDescriptionRepository descriptionRepository, IEpisodeRepository episodeRepository, IEpisodeRegisterRepository episodeRegisterRepository)
+        public DescriptionVideoService(IAccountService accountService, IDescriptionRepository descriptionRepository, IEpisodeRepository episodeRepository, IEpisodeRegisterRepository episodeRegisterRepository)
         {
             _descriptionRepository = descriptionRepository;
             _episodeRepository = episodeRepository;
             _episodeRegisterRepository = episodeRegisterRepository;
+            _accountService = accountService;
         }
         public async Task<string> DeleteNameByIdAsync(string nameCfg, string name)
         {
-            //check all finish downloaded
-
-            //get anime
-            var anime = await _descriptionRepository.GetNameByNameAsync(nameCfg, name);
-
-            if (anime == null)
-                return null;
-
             //get episodes
             var episodes = await _episodeRepository.GetObjectsByNameAsync(name);
 
             foreach (var episode in episodes)
             {
                 if (!(episode.StateDownload == "completed" || episode.StateDownload == null))
-                    return "-1";
+                    throw new ApiConflictException();
             }
 
-            var rs = await _descriptionRepository.DeleteNameAsync(nameCfg, name);
-            var rsEpisode = await _episodeRepository.DeleteByNameAsync(name);
+            try
+            {
+                await _descriptionRepository.DeleteNameAsync(nameCfg, name);
+            }
+            catch (ApiNotFoundException)
+            {
+                _logger.Warn($"I tried delete description video name: {name} nameCfg: {nameCfg}");
+            }
 
-            if (rs <= 0 || rsEpisode <= 0)
-                return null;
+            try
+            {
+                await _episodeRepository.DeleteByNameAsync(name);
+            }
+            catch (ApiNotFoundException)
+            {
+                _logger.Warn($"I tried delete episodes name: {name} nameCfg: {nameCfg}");
+            }
 
             return name;
         }
 
-        public async Task<IEnumerable<JObject>> GetMostNameByNameAsync(string nameCfg, string name)
+        public async Task<IEnumerable<JObject>> GetMostNameByNameAsync(string nameCfg, string name, string username)
         {
-            return await _descriptionRepository.GetMostNameByNameAsync(nameCfg, name);
+            var result = await _descriptionRepository.GetMostNameByNameAsync(nameCfg, name);
+
+            try
+            {
+                var watchList = await _accountService.GetListWatchListByUsername(username);
+
+                result.ForEach(item =>
+                {
+                    var filterWatchList = watchList.Where((singleWatchList) =>
+                    {
+                        if (singleWatchList.Name == item["name_id"].ToString() && singleWatchList.NameCfg == item["nameCfg"].ToString())
+                            return true;
+                        return false;
+                    });
+
+                    if (filterWatchList.Count() > 0)
+                        item["watchList"] = true;
+                    else
+                        item["watchList"] = false;
+                });
+            }
+            catch (ApiNotFoundException) { }
+
+            return result;
         }
 
-        public async Task<IEnumerable<JObject>> GetNameAllAsync(string nameCfg)
+        public async Task<IEnumerable<JObject>> GetNameAllAsync(string nameCfg, string username)
         {
-            return await _descriptionRepository.GetNameAllAsync(nameCfg);
+            var result = await _descriptionRepository.GetNameAllAsync(nameCfg);
+
+            try
+            {
+                var watchList = await _accountService.GetListWatchListByUsername(username);
+
+                result.ForEach(item =>
+                {
+                    var filterWatchList = watchList.Where((singleWatchList) =>
+                    {
+                        if (singleWatchList.Name == item["name_id"].ToString() && singleWatchList.NameCfg == item["nameCfg"].ToString())
+                            return true;
+                        return false;
+                    });
+
+                    if (filterWatchList.Count() > 0)
+                        item["watchList"] = true;
+                    else
+                        item["watchList"] = false;
+                });
+            }
+            catch (ApiNotFoundException) { }
+
+            return result;
         }
 
-        public async Task<IEnumerable<GenericVideoDTO>> GetNameAllWithAllAsync(string nameCfg)
+        public async Task<IEnumerable<JObject>> GetNameAllOnlyWatchListAsync(string nameCfg, string username)
+        {
+            var watchList = await _accountService.GetListWatchListByUsername(username);
+
+            var result = new List<JObject>();
+            JObject resultFind;
+
+            foreach (var watch in watchList)
+            {
+                if (watch.NameCfg == nameCfg)
+                {
+                    resultFind = await _descriptionRepository.GetNameByNameAsync(watch.NameCfg, watch.Name);
+
+                    if (resultFind != null)
+                        result.Add(resultFind);
+                }
+            }
+
+            result.ForEach(item =>
+            {
+                var filterWatchList = watchList.Where((singleWatchList) =>
+                {
+                    if (singleWatchList.Name == item["name_id"].ToString() && singleWatchList.NameCfg == item["nameCfg"].ToString())
+                        return true;
+                    return false;
+                });
+
+                if (filterWatchList.Count() > 0)
+                    item["watchList"] = true;
+                else
+                    item["watchList"] = false;
+            });
+
+            return result;
+        }
+
+        public async Task<IEnumerable<GenericVideoDTO>> GetNameAllWithAllAsync(string nameCfg, string username)
         {
             List<GenericVideoDTO> listGenericDTO = new();
 
@@ -72,8 +161,27 @@ namespace Cesxhin.AnimeManga.Application.Services
             List<EpisodeRegisterDTO> listEpisodeRegisterDTO = new();
 
             var listDescriptions = await _descriptionRepository.GetNameAllAsync(nameCfg);
-            if (listDescriptions == null)
-                return null;
+
+            try
+            {
+                var watchList = await _accountService.GetListWatchListByUsername(username);
+
+                listDescriptions.ForEach(item =>
+                {
+                    var filterWatchList = watchList.Where((singleWatchList) =>
+                    {
+                        if (singleWatchList.Name == item["name_id"].ToString() && singleWatchList.NameCfg == item["nameCfg"].ToString())
+                            return true;
+                        return false;
+                    });
+
+                    if (filterWatchList.Any())
+                        item["watchList"] = true;
+                    else
+                        item["watchList"] = false;
+                });
+            }
+            catch (ApiNotFoundException) { }
 
             //anime
             foreach (var description in listDescriptions)
@@ -83,12 +191,9 @@ namespace Cesxhin.AnimeManga.Application.Services
                 //episodes
                 foreach (var episode in episodes)
                 {
-                    var episodesRegisters = await _episodeRegisterRepository.GetObjectsRegisterByObjectId(episode.ID);
+                    var episodeRegister = await _episodeRegisterRepository.GetObjectRegisterByObjectId(episode.ID);
 
-                    //get first episodeRegister
-                    foreach (var episodeRegister in episodesRegisters)
-                        listEpisodeRegisterDTO.Add(EpisodeRegisterDTO.EpisodeRegisterToEpisodeRegisterDTO(episodeRegister));
-
+                    listEpisodeRegisterDTO.Add(EpisodeRegisterDTO.EpisodeRegisterToEpisodeRegisterDTO(episodeRegister));
                     listEpisodeDTO.Add(EpisodeDTO.EpisodeToEpisodeDTO(episode));
                 }
 
@@ -114,26 +219,49 @@ namespace Cesxhin.AnimeManga.Application.Services
             return listGenericDTO;
         }
 
-        public async Task<JObject> GetNameByNameAsync(string nameCfg, string name)
+        public async Task<JObject> GetNameByNameAsync(string nameCfg, string name, string username)
         {
-            return await _descriptionRepository.GetNameByNameAsync(nameCfg, name);
+            var result = await _descriptionRepository.GetNameByNameAsync(nameCfg, name);
+
+            try
+            {
+                var watchList = await _accountService.GetListWatchListByUsername(username);
+
+                var filterWatchList = watchList.Where((singleWatchList) =>
+                {
+                    if (singleWatchList.Name == result["name_id"].ToString() && singleWatchList.NameCfg == result["nameCfg"].ToString())
+                        return true;
+                    return false;
+                });
+
+                if (filterWatchList.Count() > 0)
+                    result["watchList"] = true;
+                else
+                    result["watchList"] = false;
+            }
+            catch (ApiNotFoundException) { }
+
+            return result;
         }
 
         public async Task<JObject> InsertNameAsync(string nameCfg, JObject description)
         {
             if (description.ContainsKey("name_id"))
             {
-                var find = await _descriptionRepository.GetNameByNameAsync(nameCfg, description.GetValue("name_id").ToString());
-
-                if (find == null)
+                try
+                {
+                    await _descriptionRepository.GetNameByNameAsync(nameCfg, description.GetValue("name_id").ToString());
+                    throw new ApiConflictException();
+                }
+                catch (ApiNotFoundException)
+                {
                     return await _descriptionRepository.InsertNameAsync(nameCfg, description);
-                else
-                    return null;
+                }
             }
             else
             {
-                _logger.Error("Not found field 'name_id'");
-                throw new Exception();
+                _logger.Error("Not found field 'name_id' of video");
+                throw new ApiConflictException("Not found field 'name_id' of video");
             }
         }
     }
