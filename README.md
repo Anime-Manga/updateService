@@ -23,5 +23,5 @@ example:
     BASE_PATH: "/folder/anime" or "D:\\\\Directory\Anime" #/ [default]
     TIME_REFRESH: "60000" <-- milliseconds #120000 [default] 2 minutes
     LIMIT_THREAD_PARALLEL: "8" #5 [default]
-    SELECT_SERVICE: "manga or anime" #anime
+    SELECT_SERVICE: "book or video" #video
 ```
