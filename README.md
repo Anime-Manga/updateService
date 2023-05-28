@@ -1,7 +1,13 @@
 ## 💾Update Service
 Questo progetto verrà utilizzato per controllare se sono presenti nel file locale se non ci sono, invia un messaggio a DownloadService che scarica l'episodio mancante.
 ### Information general:
-- `require` volume mounted on Docker
+> Note: `require` volume mounted on Docker
+
+### Dependencies
+| Services | Required |
+| ------ | ------ |
+| Api | ✅  |
+| RabbitMQ | ✅  |
 ### Variabili globali richiesti:
 ```sh
 example:
@@ -23,5 +29,5 @@ example:
     BASE_PATH: "/folder/anime" or "D:\\\\Directory\Anime" #/ [default]
     TIME_REFRESH: "60000" <-- milliseconds #120000 [default] 2 minutes
     LIMIT_THREAD_PARALLEL: "8" #5 [default]
-    SELECT_SERVICE: "manga or anime" #anime
+    SELECT_SERVICE: "book or video" #video
 ```
