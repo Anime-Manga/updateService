@@ -1,7 +1,13 @@
 ## 💾Update Service
 Questo progetto verrà utilizzato per controllare se sono presenti nel file locale se non ci sono, invia un messaggio a DownloadService che scarica l'episodio mancante.
 ### Information general:
-- `require` volume mounted on Docker
+> Note: `require` volume mounted on Docker
+
+### Dependencies
+| Services | Required |
+| ------ | ------ |
+| Api | ✅  |
+| RabbitMQ | ✅  |
 ### Variabili globali richiesti:
 ```sh
 example:
