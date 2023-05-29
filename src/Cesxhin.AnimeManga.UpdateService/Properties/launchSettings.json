@@ -1,0 +1,14 @@
+﻿{
+  "profiles": {
+    "update": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ADDRESS_RABBIT": "145.110.1.234",
+        "PORT_API": "5000",
+        "LOG_LEVEL": "Info",
+        "BASE_PATH": "D:\\TestAnime",
+        "SELECT_SERVICE": "book"
+      }
+    }
+  }
+}

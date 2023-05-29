@@ -1,5 +1,5 @@
 using Cesxhin.AnimeManga.Application.CheckManager.Interfaces;
-using Cesxhin.AnimeManga.Application.NlogManager;
+using Cesxhin.AnimeManga.Modules.NlogManager;
 using Microsoft.Extensions.Hosting;
 using NLog;
 using System;
