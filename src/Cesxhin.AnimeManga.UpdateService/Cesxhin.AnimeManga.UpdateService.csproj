@@ -5,7 +5,10 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="C:\Users\matti\.nuget\packages\nlog.config\4.7.12\contentFiles\any\any\NLog.config" />
+    <_WebToolingArtifacts Remove="Properties\launchSettings.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Properties\launchSettings.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.0.14" />
@@ -19,8 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\references\Cesxhin.AnimeManga.Application\Cesxhin.AnimeManga.Application.csproj" />
     <ProjectReference Include="..\references\Cesxhin.AnimeManga.Domain\Cesxhin.AnimeManga.Domain.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
+    <ProjectReference Include="..\references\Cesxhin.AnimeManga.Modules\Cesxhin.AnimeManga.Modules.csproj" />
+    <ProjectReference Include="..\Cesxhin.AnimeManga.Application\Cesxhin.AnimeManga.Application.csproj" />
   </ItemGroup>
 </Project>
