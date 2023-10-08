@@ -110,7 +110,7 @@ namespace Cesxhin.AnimeManga.Application.CheckManager
                 //check integry file
                 if (chapter.StateDownload == null || chapter.StateDownload == "failed" || (chapter.StateDownload == "completed" && chapterRegister.ChapterHash == null))
                 {
-                    ConfirmStartDownload(chapter, chapterApi);
+                    ConfirmStartDownload(chapter, chapterApi, CalculatePriority(book, chapter));
                 }
                 else if ((!File.Exists(chapterRegister.ChapterPath[i]) && chapter.StateDownload != "pending"))
                 {
@@ -154,14 +154,14 @@ namespace Cesxhin.AnimeManga.Application.CheckManager
 
                     //if not found file
                     if (found == false)
-                        ConfirmStartDownload(chapter, chapterApi);
+                        ConfirmStartDownload(chapter, chapterApi, CalculatePriority(book, chapter));
                 }
             }
 
             return null;
         }
 
-        private async void ConfirmStartDownload(ChapterDTO chapter, Api<ChapterDTO> chapterApi)
+        private async void ConfirmStartDownload(ChapterDTO chapter, Api<ChapterDTO> chapterApi, int priority)
         {
             //set pending to 
             chapter.StateDownload = "pending";
@@ -171,7 +171,7 @@ namespace Cesxhin.AnimeManga.Application.CheckManager
                 //set change status
                 await chapterApi.PutOne("/book/statusDownload", chapter);
 
-                await _publishEndpoint.Publish(chapter);
+                await _publishEndpoint.Publish(chapter, (context) => context.SetPriority((byte)priority));
                 _logger.Info($"this file ({chapter.NameManga} volume: {chapter.CurrentVolume} chapter: {chapter.CurrentChapter}) does not exists, sending message to DownloadService");
             }
             catch (ApiNotFoundException ex)
@@ -182,6 +182,11 @@ namespace Cesxhin.AnimeManga.Application.CheckManager
             {
                 _logger.Fatal($"Error update chapter, details error: {ex.Message}");
             }
+        }
+
+        private int CalculatePriority(GenericBookDTO book, ChapterDTO chapter)
+        {
+            return 255 - (((int)chapter.CurrentChapter) * 255 / (book.Chapters.Count + 1));
         }
     }
 }
