@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Set priority messages for rabbit
 
+### Changed
+- messages for notify
+
 ## [2.0.1] - 17-06-2023
 ### Fixed
 - Class of models
