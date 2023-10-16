@@ -104,7 +104,7 @@ namespace Cesxhin.AnimeManga.Application.CheckManager
             //check integry file
             if (episode.StateDownload == null || episode.StateDownload == "failed" || (episode.StateDownload == "completed" && episodeRegister.EpisodeHash == null))
             {
-                ConfirmStartDownload(episode, episodeApi);
+                ConfirmStartDownload(episode, episodeApi, CalculatePriority(video, episode));
             }
             else if (!File.Exists(episodeRegister.EpisodePath) && episode.StateDownload == "completed")
             {
@@ -147,13 +147,13 @@ namespace Cesxhin.AnimeManga.Application.CheckManager
 
                 //if not found file
                 if (found == false)
-                    ConfirmStartDownload(episode, episodeApi);
+                    ConfirmStartDownload(episode, episodeApi, CalculatePriority(video, episode));
             }
 
             return null;
         }
 
-        private async void ConfirmStartDownload(EpisodeDTO episode, Api<EpisodeDTO> episodeApi)
+        private async void ConfirmStartDownload(EpisodeDTO episode, Api<EpisodeDTO> episodeApi, int priority)
         {
             //set pending to 
             episode.StateDownload = "pending";
@@ -163,7 +163,7 @@ namespace Cesxhin.AnimeManga.Application.CheckManager
                 //set change status
                 await episodeApi.PutOne("/video/statusDownload", episode);
 
-                await _publishEndpoint.Publish(episode);
+                await _publishEndpoint.Publish(episode, (context) => context.SetPriority((byte)priority));
                 _logger.Info($"this file ({episode.VideoId} episode: {episode.NumberEpisodeCurrent}) does not exists, sending message to DownloadService");
             }
             catch (ApiNotFoundException ex)
@@ -174,6 +174,11 @@ namespace Cesxhin.AnimeManga.Application.CheckManager
             {
                 _logger.Fatal($"Error update episode, details error: {ex.Message}");
             }
+        }
+
+        private int CalculatePriority(GenericVideoDTO video, EpisodeDTO episode)
+        {
+            return 255 - (episode.NumberEpisodeCurrent * 255 / (video.Episodes.Count + 1));
         }
     }
 }
